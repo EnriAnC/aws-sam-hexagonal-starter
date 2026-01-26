@@ -7,7 +7,7 @@ Description: >
 Globals:
   Function:
     Timeout: 30
-    MemorySize: 128
+    MemorySize: 256 # Aumentamos para soportar drivers pesados
     Runtime: nodejs20.x
     Architectures:
       - x86_64
@@ -63,6 +63,8 @@ Resources:
     Properties:
       CodeUri: src/
       Handler: handlers/sales/process-inventory.handler
+      Layers:
+        - !Ref SqlServerLayer
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -71,7 +73,8 @@ Resources:
         Format: esm
         Sourcemap: true
         External:
-          - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
+          - '@aws-sdk/*'
+          - 'mssql' # Marcamos como externo para que lo busque en la Layer
         EntryPoints: 
           - handlers/sales/process-inventory.ts
 
@@ -80,6 +83,8 @@ Resources:
     Properties:
       CodeUri: src/
       Handler: handlers/sales/emit-invoice.handler
+      Layers:
+        - !Ref SqlServerLayer
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -88,9 +93,22 @@ Resources:
         Format: esm
         Sourcemap: true
         External:
-          - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
+          - '@aws-sdk/*'
+          - 'mssql'
         EntryPoints: 
           - handlers/sales/emit-invoice.ts
+
+  # --- INFRASTRUCTURE: LAYERS ---
+  SqlServerLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: SqlServerDriverLayer
+      Description: "Contiene la librería mssql para acceso a base de datos corporativa"
+      ContentUri: layers/sqlserver/
+      CompatibleRuntimes:
+        - nodejs20.x
+    Metadata:
+      BuildMethod: nodejs20.x # SAM instalará las dependencias aquí
 
   # --- ORCHESTRATION: STEP FUNCTIONS ---
   SalesOrchestrator:

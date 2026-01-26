@@ -10,6 +10,7 @@
     },
     "devDependencies": {
         "@types/aws-lambda": "^8.10.130",
+        "@types/node": "^20.11.0",
         "aws-sdk": "^2.1500.0",
         "esbuild": "^0.20.0",
         "typescript": "^5.3.3"

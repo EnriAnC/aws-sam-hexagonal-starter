@@ -51,6 +51,21 @@ El proyecto está configurado para generar un código JavaScript **extremadament
 - **Target: esNext**: Utiliza las características más modernas de Node.js (const, let) soportadas por Lambda Node 20+.
 - **Sourcemaps: true**: Permite mapear errores del JS generado directamente a las líneas originales en TS.
 
+## 🗄️ Estrategia Multi-DB y Lambda Layers
+
+En este proyecto se demuestra cómo manejar múltiples motores de base de datos de manera eficiente:
+
+- **DynamoDB**: Se incluye en el bundle principal de la Lambda mediante tree-shaking. Es ideal para transacciones rápidas.
+- **SQL Server (mssql)**: Al ser una librería pesada, se gestiona mediante una **Lambda Layer** en las funciones que la requieren (`ProcessInventory` y `EmitInvoice`).
+
+### Cómo funciona la exclusión de librerías:
+En el `template.yaml`, las funciones que usan SQL tienen configurado:
+```yaml
+External:
+  - 'mssql'
+```
+Esto le indica a `esbuild` que **no** incluya `mssql` dentro del archivo `.js` de la Lambda. En su lugar, la Lambda la buscará en la Layer en tiempo de ejecución. La función `CreateSale` no utiliza esta configuración, por lo que su bundle es 100% independiente y ligero.
+
 ## 📦 Comandos Útiles
 
 ```bash
