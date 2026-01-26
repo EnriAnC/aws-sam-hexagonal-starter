@@ -1,0 +1,17 @@
+{
+    "name": "hexagonal-aws-sam",
+    "version": "1.0.0",
+    "description": "ERP Sales Module with SAM and Hexagonal Architecture",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "sam:build": "sam build"
+    },
+    "devDependencies": {
+        "@types/aws-lambda": "^8.10.130",
+        "aws-sdk": "^2.1500.0",
+        "esbuild": "^0.20.0",
+        "typescript": "^5.3.3"
+    }
+}

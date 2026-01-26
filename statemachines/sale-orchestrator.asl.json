@@ -1,0 +1,49 @@
+{
+  "StartAt": "ProcessInventory",
+  "States": {
+    "ProcessInventory": {
+      "Type": "Task",
+      "Resource": "${InventoryFunctionArn}",
+      "Next": "EmitInvoice",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "InventoryShortageError"
+          ],
+          "Next": "HandleShortage"
+        }
+      ]
+    },
+    "EmitInvoice": {
+      "Type": "Task",
+      "Resource": "${InvoiceFunctionArn}",
+      "Next": "NotifySaleCompleted"
+    },
+    "NotifySaleCompleted": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "saleId.$": "$.saleId",
+              "status": "COMPLETED"
+            },
+            "DetailType": "SaleCompleted",
+            "EventBusName": "ErpEventBus",
+            "Source": "erp.sales"
+          }
+        ]
+      },
+      "End": true
+    },
+    "HandleShortage": {
+      "Type": "Pass",
+      "Result": {
+        "status": "FAILED",
+        "reason": "Inventory Shortage"
+      },
+      "End": true
+    }
+  }
+}

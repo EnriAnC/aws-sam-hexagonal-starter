@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  ERP Serverless - Sales Module
+  Architecture for a scalable and clean ERP system.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Runtime: nodejs20.x
+    Architectures:
+      - x86_64
+    Tracing: Active
+    Environment:
+      Variables:
+        EVENT_BUS_NAME: !Ref ErpEventBus
+
+Resources:
+  # --- INFRASTRUCTURE: EVENTS ---
+  ErpEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: ErpEventBus
+
+  # --- INFRASTRUCTURE: API ---
+  SalesApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      TracingEnabled: true
+
+  # --- CORE LOGIC: LAMBDAS (ADAPTERS) ---
+  CreateSaleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/sales/create-sale.handler
+      Events:
+        CreateSale:
+          Type: Api
+          Properties:
+            Path: /sales
+            Method: post
+            RestApiId: !Ref SalesApi
+      Policies:
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt SalesOrchestrator.Name
+    Metadata: # AWS SAM will use esbuild to bundle TS to JS
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "esNext"
+        Format: esm
+        Sourcemap: true
+        External:
+          - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
+        EntryPoints: 
+          - handlers/sales/create-sale.ts
+
+  ProcessInventoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/sales/process-inventory.handler
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "esNext"
+        Format: esm
+        Sourcemap: true
+        External:
+          - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
+        EntryPoints: 
+          - handlers/sales/process-inventory.ts
+
+  EmitInvoiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/sales/emit-invoice.handler
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "esNext"
+        Format: esm
+        Sourcemap: true
+        External:
+          - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
+        EntryPoints: 
+          - handlers/sales/emit-invoice.ts
+
+  # --- ORCHESTRATION: STEP FUNCTIONS ---
+  SalesOrchestrator:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachines/sale-orchestrator.asl.json
+      DefinitionSubstitutions:
+        InventoryFunctionArn: !GetAtt ProcessInventoryFunction.Arn
+        InvoiceFunctionArn: !GetAtt EmitInvoiceFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ProcessInventoryFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref EmitInvoiceFunction
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref ErpEventBus
+
+  # --- STORAGE ---
+  SalesTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: saleId
+        Type: String
+
+Outputs:
+  SalesApiUrl:
+    Description: "API Gateway endpoint URL for Prod stage for Sales module"
+    Value: !Sub "https://${SalesApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/sales/"
