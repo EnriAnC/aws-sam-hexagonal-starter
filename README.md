@@ -2,6 +2,15 @@
 
 Este repositorio contiene la arquitectura de referencia para la refactorización de un ERP gigante hacia un sistema serverless escalable, limpio y mantenible. Se utiliza **AWS SAM** con **TypeScript** y **esbuild**.
 
+## 📖 Documentación Detallada
+
+Para facilitar la adopción y replicación del sistema, consulta las siguientes guías:
+
+*   [**Arquitectura Hexagonal & DDD**](./docs/HEXAGONAL.md): Capas, responsabilidades y flujo de datos.
+*   [**Patrones de Infraestructura**](./docs/INFRASTRUCTURE_PATTERNS.md): Integración con Step Functions y EventBridge.
+*   [**Estrategia de Build & Layers**](./docs/BUILDS.md): Configuración de esbuild, SAM y manejo de librerías pesadas.
+*   [**Bases de Datos & Multi-Tenancy**](./docs/DATABASE_TIERS.md): Pooling dinámico y optimización de conexiones.
+
 ## 🏛️ Arquitectura
 
 El proyecto sigue los principios de la **Arquitectura Hexagonal (Puertos y Adaptadores)** y el **Diseño Dirigido por Dominios (DDD)** para desacoplar la lógica de negocio de la infraestructura de AWS.
