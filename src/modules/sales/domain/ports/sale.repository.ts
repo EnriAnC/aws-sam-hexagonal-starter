@@ -1,4 +1,4 @@
-import { Sale } from './models/sale.js';
+import { Sale } from '../entities/sale.entity.js';
 
 export interface ISaleRepository {
     save(sale: Sale): Promise<void>;

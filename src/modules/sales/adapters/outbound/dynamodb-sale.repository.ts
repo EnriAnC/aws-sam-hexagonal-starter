@@ -1,8 +1,5 @@
-import { Sale } from '../domain/models/sale.js';
-import { ISaleRepository } from '../domain/repository.js';
-import { DynamoDB } from 'aws-sdk';
-
-const client = new DynamoDB({});
+import { Sale } from '../../domain/entities/sale.entity.js';
+import { ISaleRepository } from '../../domain/ports/sale.repository.js';
 
 export class DynamoDBSaleRepository implements ISaleRepository {
     private sales: Sale[] = [];

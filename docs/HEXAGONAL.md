@@ -1,50 +1,53 @@
-# Arquitectura Hexagonal y DDD en Serverless
+# Arquitectura Hexagonal Granular (Ports & Adapters)
 
-Esta arquitectura tiene como objetivo principal el **desacoplamiento total** de la lógica de negocio de los detalles técnicos de la infraestructura (AWS, bases de datos, librerías externas).
+Esta arquitectura separa el sistema en capas con responsabilidades claras, ideal para un ERP de gran escala.
 
-## 1. El Dominio (Domain)
+## 1. Domain (Núcleo)
 Ubicación: `src/modules/{modulo}/domain`
 
-Es la capa más interna. Aquí no se permite ningún `import` de librerías de AWS o de terceros (exceptuando quizás utilidades muy básicas).
-*   **Models**: Entidades de negocio (clases o interfaces) que representan los conceptos del ERP (Sale, Product, Invoice).
-*   **Repository Interfaces**: Los "Puertos". Definen qué acciones se pueden hacer sobre la base de datos sin especificar cómo se hacen.
-*   **Exceptions**: Errores propios del negocio (ej: `InsufficientStockError`).
+Es la lógica pura del negocio.
+*   **Entities**: Modelos de datos de negocio (`Sale`, `Product`).
+*   **Ports**: Interfaces que definen los contratos para el mundo exterior (`ISaleRepository`).
 
-## 2. La Aplicación (Application)
+## 2. Application (Casos de Uso)
 Ubicación: `src/modules/{modulo}/application`
 
-Contiene los **Casos de Uso**. Es el director de orquesta.
-*   Toma la entrada de un Handler.
-*   Utiliza el Repositorio (vía interfaz) para cargar/guardar datos.
-*   Aplica las reglas de negocio del Dominio.
-*   **No conoce** si está corriendo en un Lambda o en un contenedor.
+Orquesta el dominio para cumplir los objetivos del sistema.
+*   **Use Cases**: Clases que implementan la lógica de un proceso (ej: `CreateSaleUseCase`). Reciben inputs tipados y coordinan entidades y puertos.
 
-## 3. Infraestructura (Infrastructure)
+## 3. Adapters (Traducción)
+Ubicación: `src/modules/{modulo}/adapters`
+
+### Inbound (Entrada)
+*   **Handlers**: Lambda functions que reciben eventos de AWS.
+*   **DTOs & Validation**: Validan el input antes de llamar a la aplicación.
+
+### Outbound (Salida)
+*   **Repositories**: Implementaciones técnicas de los puertos (DynamoDB, SQL Server).
+
+## 4. Infrastructure (Tecnología)
 Ubicación: `src/modules/{modulo}/infrastructure`
 
-Aquí se implementan los "Adaptadores Secundarios".
-*   **Repositories**: Implementaciones reales de las interfaces (DynamoDB, SQL Server).
-*   **Clients**: Clientes para APIs externas.
-*   **Database Helpers**: Lógica de conexión y pools (como el `database.ts` que creamos).
+Herramientas técnicas específicas del módulo, como el cliente de conexión a base de datos o helpers de pooling.
 
-## 4. Handlers (Adapters)
-Ubicación: `src/handlers/{modulo}`
+## 5. Shared (Transversal)
+Ubicación: `src/shared`
 
-Son los "Adaptadores Primarios".
-*   Es el punto de entrada de AWS Lambda.
-*   Limpia el evento (API Gateway, SQS, etc).
-*   **Inyección de Dependencias**: Aquí es donde se instancia el Repositorio concreto (Dynamo o SQL) y se pasa al Caso de Uso.
+Código técnico no relacionado con el negocio que se reutiliza en todo el ERP (Logger, Middleware de Errores, Clientes de Eventos).
 
 ---
 
-## 🎨 Diagrama de Flujo
+## 🎨 Diagrama del Refactor Maestro
 
 ```mermaid
-graph LR
-    API[API Gateway] --> H[Handler]
-    H --> UC[Use Case]
-    UC --> D[Domain Logic]
-    UC --> R[Repository Interface]
-    R -.-> IR[Infra Implementation]
-    IR --> DB[(SQL / Dynamo)]
+graph TD
+    AWS[Event: API/SQS/StepFunction] --> IN[Adapter Inbound: Handler]
+    IN --> VAL[DTO Validation]
+    VAL --> UC[Application: Use Case]
+    UC --> ENT[Domain: Entity]
+    UC --> PRT[Domain: Port Interface]
+    PRT --> OUT[Adapter Outbound: Repository]
+    OUT --> INF[Infrastructure: DB Helper]
+    INF --> DB[(Database)]
+    UC -.-> LOG[Shared: Logger]
 ```
