@@ -29,26 +29,34 @@ El proyecto sigue los principios de la **Arquitectura Hexagonal (Puertos y Adapt
 - **AWS Step Functions**: Orquestación de procesos de larga duración o complejos (Flujo de Venta -> Inventario -> Facturación).
 - **AWS EventBridge**: Coreografía de eventos para comunicación asíncrona entre módulos.
 
-## 📂 Estructura de Carpetas
+## 📂 Estructura de Carpetas (Granular Hexagonal)
+
+El proyecto está organizado para que cada módulo (Bounded Context) sea totalmente independiente y auto-contenido:
 
 ```text
 hexagonal-aws-sam/
 ├── src/
-│   ├── handlers/ sales/         # Adaptadores Primarios (Lambdas)
-│   │   ├── create-sale.ts       # Entry point API (POST /sales)
-│   │   ├── process-inventory.ts # Lógica invocada por Step Function
-│   │   └── emit-invoice.ts      # Lógica de facturación
-│   ├── modules/ sales/          # El Bounded Context de Ventas
-│   │   ├── domain/              # Lógica pura e Interfaces
-│   │   │   ├── models/          # Entidades (Sale, SaleItem)
-│   │   │   └── repository.ts    # Puerto (Interface para DB)
-│   │   ├── application/         # Casos de Uso (CreateSaleUseCase)
-│   │   └── infrastructure/      # Adaptadores (DynamoDBSaleRepository)
-│   └── shared/                  # Utilidades y tipos cross-module
-├── statemachines/               # Definiciones ASL para Step Functions
-├── events/                      # Schemas de EventBridge
-├── template.yaml                # Definición de AWS SAM (CloudFormation)
-└── package.json                 # Dependencias y scripts de build
+│   ├── modules/ sales/          # Bounded Context: Ventas
+│   │   ├── domain/              # El CORAZÓN (Sin dependencias externas)
+│   │   │   ├── entities/        # Modelos de negocio (Sale, SaleItem)
+│   │   │   ├── ports/           # Interfaces de salida (ISaleRepository)
+│   │   │   └── services/        # Lógica de cálculo compleja (SaleCalculator)
+│   │   ├── application/         # Los CASOS DE USO (Orquestación)
+│   │   │   └── use-cases/       # Lógica procedural (CreateSaleUseCase)
+│   │   ├── adapters/            # La TRADUCCIÓN (Conexión con el exterior)
+│   │   │   ├── inbound/         # Entrada (Lambda Handlers)
+│   │   │   │   └── create-sale/ # Carpeta por Lambda (Handler + DTO)
+│   │   │   └── outbound/        # Salida (Implementación de Repositorios)
+│   │   └── infrastructure/      # La TECNOLOGÍA (Configuración técnica)
+│   │       └── database.ts      # Pool de conexiones específico del módulo
+│   └── shared/                  # El KERNEL COMPARTIDO (Transversal)
+│       └── infrastructure/      # Herramientas técnicas (Logger, etc.)
+├── layers/                      # AWS Lambda Layers (Librerías pesadas)
+│   └── sqlserver/nodejs/        # Driver de SQL Server (msql) externo
+├── docs/                        # Documentación técnica detallada
+├── statemachines/               # Orquestación con Step Functions
+├── template.yaml                # Infraestructura como Código (SAM)
+└── package.json                 # Dependencias y scripts
 ```
 
 ## 🚀 Configuración del Build (esbuild)
