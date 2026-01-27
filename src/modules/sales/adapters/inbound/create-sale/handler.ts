@@ -1,8 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { CreateSaleUseCase } from '../../application/use-cases/create-sale.use-case.js';
-import { DynamoDBSaleRepository } from '../outbound/dynamodb-sale.repository.js';
-import { validateCreateSaleRequest } from './create-sale.dto.js';
-import { Logger } from '../../../../shared/infrastructure/logger.js';
+import { CreateSaleUseCase } from '../../../application/use-cases/create-sale.use-case.js';
+import { DynamoDBSaleRepository } from '../../outbound/dynamodb-sale.repository.js';
+import { validateCreateSaleRequest } from './dto.js';
+import { Logger } from '../../../../../shared/infrastructure/logger.js';
 
 const repository = new DynamoDBSaleRepository();
 const useCase = new CreateSaleUseCase(repository);

@@ -35,7 +35,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
-      Handler: modules/sales/adapters/inbound/create-sale.handler.handler
+      Handler: modules/sales/adapters/inbound/create-sale/handler.handler
       Events:
         CreateSale:
           Type: Api
@@ -56,13 +56,13 @@ Resources:
         External:
           - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
         EntryPoints: 
-          - modules/sales/adapters/inbound/create-sale.handler.ts
+          - modules/sales/adapters/inbound/create-sale/handler.ts
 
   ProcessInventoryFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
-      Handler: modules/sales/adapters/inbound/process-inventory.handler.handler
+      Handler: modules/sales/adapters/inbound/process-inventory/handler.handler
       Layers:
         - !Ref SqlServerLayer
     Metadata:
@@ -76,13 +76,13 @@ Resources:
           - '@aws-sdk/*'
           - 'mssql' # Marcamos como externo para que lo busque en la Layer
         EntryPoints: 
-          - modules/sales/adapters/inbound/process-inventory.handler.ts
+          - modules/sales/adapters/inbound/process-inventory/handler.ts
 
   EmitInvoiceFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
-      Handler: modules/sales/adapters/inbound/emit-invoice.handler.handler
+      Handler: modules/sales/adapters/inbound/emit-invoice/handler.handler
       Layers:
         - !Ref SqlServerLayer
     Metadata:
@@ -96,7 +96,7 @@ Resources:
           - '@aws-sdk/*'
           - 'mssql'
         EntryPoints: 
-          - modules/sales/adapters/inbound/emit-invoice.handler.ts
+          - modules/sales/adapters/inbound/emit-invoice/handler.ts
 
   # --- INFRASTRUCTURE: LAYERS ---
   SqlServerLayer:

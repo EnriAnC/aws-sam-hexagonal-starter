@@ -15,12 +15,14 @@ Ubicación: `src/modules/{modulo}/application`
 Orquesta el dominio para cumplir los objetivos del sistema.
 *   **Use Cases**: Clases que implementan la lógica de un proceso (ej: `CreateSaleUseCase`). Reciben inputs tipados y coordinan entidades y puertos.
 
-## 3. Adapters (Traducción)
-Ubicación: `src/modules/{modulo}/adapters`
-
 ### Inbound (Entrada)
-*   **Handlers**: Lambda functions que reciben eventos de AWS.
-*   **DTOs & Validation**: Validan el input antes de llamar a la aplicación.
+Ubicación: `src/modules/{modulo}/adapters/inbound/{nombre-lambda}/`
+
+Cada Lambda tiene su propia carpeta para evitar que los archivos crezcan desmesuradamente en la raíz.
+*   **handler.ts**: El punto de entrada de AWS (contiene la función `handler`).
+*   **dto.ts**: Data Transfer Objects. Define y valida la estructura que esperamos recibir del mundo exterior.
+*   **validator.ts**: (Opcional) Si la validación (ej: Zod) es muy extensa.
+*   **mapper.ts**: (Opcional) Si necesitamos transformar el DTO al objeto que espera el caso de uso de la aplicación.
 
 ### Outbound (Salida)
 *   **Repositories**: Implementaciones técnicas de los puertos (DynamoDB, SQL Server).
