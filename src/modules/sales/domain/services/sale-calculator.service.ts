@@ -1,4 +1,4 @@
-import { SaleItem } from '../entities/sale.entity.js';
+import { SaleItem } from '../entities/sale.entity.ts';
 
 export interface CalculationResult {
     subtotal: number;

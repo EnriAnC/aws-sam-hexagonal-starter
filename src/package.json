@@ -8,14 +8,7 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "sam:build": "sam build"
     },
-    "devDependencies": {
-        "@types/aws-lambda": "^8.10.130",
-        "@types/mssql": "^9.1.9",
-        "@types/node": "^20.11.0",
-        "aws-sdk": "^2.1500.0",
-        "typescript": "^5.3.3"
-    },
     "dependencies": {
-        "mssql": "^12.2.0"
+        "esbuild": "^0.20.0"
     }
 }

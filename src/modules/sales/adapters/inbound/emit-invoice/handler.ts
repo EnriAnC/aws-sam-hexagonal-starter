@@ -1,4 +1,4 @@
-import { SqlServerSaleRepository } from '../outbound/sqlserver-sale.repository.js';
+import { SqlServerSaleRepository } from '../../outbound/sqlserver-sale.repository.ts';
 
 const repository = new SqlServerSaleRepository();
 

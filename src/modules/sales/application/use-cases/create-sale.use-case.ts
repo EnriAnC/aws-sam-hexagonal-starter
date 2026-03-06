@@ -1,6 +1,6 @@
-import { Sale } from '../../domain/entities/sale.entity.js';
-import { ISaleRepository } from '../../domain/ports/sale.repository.js';
-import { SaleCalculatorService } from '../../domain/services/sale-calculator.service.js';
+import { Sale } from '../../domain/entities/sale.entity.ts';
+import { ISaleRepository } from '../../domain/ports/sale.repository.ts';
+import { SaleCalculatorService } from '../../domain/services/sale-calculator.service.ts';
 
 export interface CreateSaleInput {
     customerId: string;

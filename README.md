@@ -1,6 +1,6 @@
 # ERP Serverless - Módulo de Ventas (AWS SAM + Hexagonal Architecture)
 
-Este repositorio contiene la arquitectura de referencia para la refactorización de un ERP gigante hacia un sistema serverless escalable, limpio y mantenible. Se utiliza **AWS SAM** con **TypeScript** y **esbuild**.
+Este repositorio contiene la arquitectura de referencia para la refactorización de un ERP gigante hacia un sistema serverless escalable, limpio y mantenible. Se utiliza **AWS SAM** con **TypeScript**, **esbuild** y **Step Functions**.
 
 ## 📖 Documentación Detallada
 
@@ -11,83 +11,58 @@ Para facilitar la adopción y replicación del sistema, consulta las siguientes 
 *   [**Estrategia de Build & Layers**](./docs/BUILDS.md): Configuración de esbuild, SAM y manejo de librerías pesadas.
 *   [**Bases de Datos & Multi-Tenancy**](./docs/DATABASE_TIERS.md): Pooling dinámico y optimización de conexiones.
 
-## 🏛️ Arquitectura
+## 🏛️ Arquitectura y Orquestación
 
-El proyecto sigue los principios de la **Arquitectura Hexagonal (Puertos y Adaptadores)** y el **Diseño Dirigido por Dominios (DDD)** para desacoplar la lógica de negocio de la infraestructura de AWS.
+El proyecto implementa la **Arquitectura Hexagonal (Puertos y Adaptadores)** y el **Diseño Dirigido por Dominios (DDD)**, orquestando procesos complejos mediante **AWS Step Functions**.
 
 ### Capas de la Aplicación
 
-1.  **Dominio (`src/modules/sales/domain`)**: El corazón del sistema. Contiene entidades de negocio e interfaces (Puertos). No tiene dependencias de librerías externas o AWS.
-2.  **Aplicación (`src/modules/sales/application`)**: Implementa los Casos de Uso. Orquesta el flujo de datos llamando a los servicios de dominio y repositorios.
-3.  **Handlers / Adaptadores Primarios (`src/handlers`)**: Puntos de entrada de AWS (Lambda Handlers). Transforman el evento de AWS (API Gateway, SQS, etc.) en llamadas a los casos de uso.
-4.  **Infraestructura / Adaptadores Secundarios (`src/modules/sales/infrastructure`)**: Implementaciones concretas de los puertos (ej: DynamoDB, Clientes de API externa).
+1.  **Dominio (`src/modules/sales/domain`)**: El corazón del sistema. Contiene entidades de negocio (`Sale`, `SaleItem`) e interfaces/puertos (`ISaleRepository`). No tiene dependencias externas.
+2.  **Aplicación (`src/modules/sales/application`)**: Implementa los Casos de Uso (`CreateSaleUseCase`). Orquesta el flujo llamando a servicios de dominio y puertos.
+3.  **Adaptadores Inbound (`src/modules/sales/adapters/inbound`)**: Handlers de Lambda que actúan como puntos de entrada (API Gateway, eventos internos).
+4.  **Adaptadores Outbound (`src/modules/sales/adapters/outbound`)**: Implementaciones técnicas de los puertos. Ejemplo: `DynamoDBSaleRepository` y `SqlServerSaleRepository`.
+5.  **Infraestructura (`src/modules/sales/infrastructure`)**: Configuración técnica transversal, como el `database.ts` para el pooling de conexiones.
 
-### 🛠️ Tecnologías Clave
+### 🔄 Flujo de Orquestación (Saga Pattern)
 
-- **AWS SAM**: Orquestación de infraestructura como código.
-- **TypeScript & esbuild**: Transpilación moderna con soporte para ESM (ECMAScript Modules).
-- **AWS Step Functions**: Orquestación de procesos de larga duración o complejos (Flujo de Venta -> Inventario -> Facturación).
-- **AWS EventBridge**: Coreografía de eventos para comunicación asíncrona entre módulos.
+El proceso de venta se gestiona mediante el `SalesOrchestrator` (Step Functions):
+1.  **CreateSale**: Valida la petición y arranca la máquina de estados.
+2.  **ProcessInventory**: Actualiza el stock en la base de datos corporativa (SQL Server).
+3.  **EmitInvoice**: Genera la factura legal (SQL Server).
+4.  **EventBridge Notification**: Notifica a otros módulos sobre la venta finalizada.
 
-## 📂 Estructura de Carpetas (Granular Hexagonal)
-
-El proyecto está organizado para que cada módulo (Bounded Context) sea totalmente independiente y auto-contenido:
+## 📂 Estructura de Carpetas
 
 ```text
 hexagonal-aws-sam/
 ├── src/
 │   ├── modules/ sales/          # Bounded Context: Ventas
-│   │   ├── domain/              # El CORAZÓN (Sin dependencias externas)
-│   │   │   ├── entities/        # Modelos de negocio (Sale, SaleItem)
-│   │   │   ├── ports/           # Interfaces de salida (ISaleRepository)
-│   │   │   └── services/        # Lógica de cálculo compleja (SaleCalculator)
-│   │   ├── application/         # Los CASOS DE USO (Orquestación)
-│   │   │   └── use-cases/       # Lógica procedural (CreateSaleUseCase)
-│   │   ├── adapters/            # La TRADUCCIÓN (Conexión con el exterior)
-│   │   │   ├── inbound/         # Entrada (Lambda Handlers)
-│   │   │   │   └── create-sale/ # Carpeta por Lambda (Handler + DTO)
-│   │   │   └── outbound/        # Salida (Implementación de Repositorios)
-│   │   └── infrastructure/      # La TECNOLOGÍA (Configuración técnica)
-│   │       └── database.ts      # Pool de conexiones específico del módulo
-│   └── shared/                  # El KERNEL COMPARTIDO (Transversal)
-│       └── infrastructure/      # Herramientas técnicas (Logger, etc.)
-├── layers/                      # AWS Lambda Layers (Librerías pesadas)
-│   └── sqlserver/nodejs/        # Driver de SQL Server (msql) externo
-├── docs/                        # Documentación técnica detallada
-├── statemachines/               # Orquestación con Step Functions
+│   │   ├── domain/              # Lógica pura (Entidades, Puertos, Servicios)
+│   │   ├── application/         # Casos de Uso (Orquestación local)
+│   │   ├── adapters/            
+│   │   │   ├── inbound/         # Handlers (create-sale, process-inventory, emit-invoice)
+│   │   │   └── outbound/        # Implementaciones (dynamodb-sale, sqlserver-sale)
+│   │   └── infrastructure/      # Configuración técnica (database, logger)
+│   └── shared/                  # Código compartido entre módulos
+├── layers/                      # Lambda Layers (msql driver y shared weights)
+├── statemachines/               # Definición de Step Functions (ASL)
 ├── template.yaml                # Infraestructura como Código (SAM)
-└── package.json                 # Dependencias y scripts
+└── package.json                 # Scripts: npm run sam:build
 ```
 
-## 🚀 Configuración del Build (esbuild)
+## 🛠️ Tecnologías y Configuración
 
-El proyecto está configurado para generar un código JavaScript **extremadamente limpio** y legible en los artefactos de despliegue mediante la metadata de SAM:
-
-- **Format: esm**: Genera módulos nativos de JS (import/export), eliminando shims de CommonJS (`__defProp`, etc.).
-- **Minify: false**: Mantiene la indentación y legibilidad para facilitar el debugging en la consola de AWS.
-- **Target: esNext**: Utiliza las características más modernas de Node.js (const, let) soportadas por Lambda Node 20+.
-- **Sourcemaps: true**: Permite mapear errores del JS generado directamente a las líneas originales en TS.
-
-## 🗄️ Estrategia Multi-DB y Lambda Layers
-
-En este proyecto se demuestra cómo manejar múltiples motores de base de datos de manera eficiente:
-
-- **DynamoDB**: Se incluye en el bundle principal de la Lambda mediante tree-shaking. Es ideal para transacciones rápidas.
-- **SQL Server (mssql)**: Al ser una librería pesada, se gestiona mediante una **Lambda Layer** en las funciones que la requieren (`ProcessInventory` y `EmitInvoice`).
-
-### Cómo funciona la exclusión de librerías:
-En el `template.yaml`, las funciones que usan SQL tienen configurado:
-```yaml
-External:
-  - 'mssql'
-```
-Esto le indica a `esbuild` que **no** incluya `mssql` dentro del archivo `.js` de la Lambda. En su lugar, la Lambda la buscará en la Layer en tiempo de ejecución. La función `CreateSale` no utiliza esta configuración, por lo que su bundle es 100% independiente y ligero.
+- **AWS SAM & esbuild**: Bundling moderno con soporte nativo para **ESM (ECMAScript Modules)**.
+- **Multi-DB Strategy**: 
+    - **DynamoDB**: Almacenamiento rápido para el estado de la venta.
+    - **SQL Server**: Integración con sistemas legacy mediante **Lambda Layers** para evitar bundles pesados (configurado como `External` en SAM).
+- **EventBridge**: Bus de eventos centralizado (`ErpEventBus`) para comunicación desacoplada.
 
 ## 📦 Comandos Útiles
 
 ```bash
-# Construir el proyecto (Transpila TS a JS y resuelve imports)
-sam build
+# Construir el proyecto (npm script)
+npm run sam:build
 
 # Probar la API localmente
 sam local start-api
@@ -96,11 +71,11 @@ sam local start-api
 sam deploy --guided
 ```
 
-## 📝 Guía para Implementadores e IAs
+## 📝 Guía de Implementación
 
 Al añadir nueva funcionalidad:
-1.  **Define el Puerto**: Crea una interfaz en `domain/`.
-2.  **Lógica de Negocio**: Implementa el flujo en `application/` usando la interfaz del puerto.
-3.  **Adaptador**: Crea la implementación real en `infrastructure/`.
-4.  **Handler**: Crea el lambda en `handlers/` que instance el adaptador y el caso de uso (inyección de dependencias manual).
-5.  **SAM**: Declara la nueva función en `template.yaml` especificando el `EntryPoint` en las `Metadata` para que `esbuild` resuelva el árbol de archivos.
+1.  **Puerto**: Define la interfaz en `domain/ports/`.
+2.  **Caso de Uso**: Implementa la lógica en `application/use-cases/`.
+3.  **Adaptador**: Crea la implementación en `adapters/outbound/`.
+4.  **Handler**: Crea el Lambda en `adapters/inbound/` inyectando las dependencias necesarias.
+5.  **SAM**: Declara el recurso en `template.yaml` y configura los `EntryPoints` en la Metadata.

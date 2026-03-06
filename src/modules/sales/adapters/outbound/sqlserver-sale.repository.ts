@@ -1,6 +1,6 @@
-import { Sale } from '../../domain/entities/sale.entity.js';
-import { ISaleRepository } from '../../domain/ports/sale.repository.js';
-import { getDatabaseConnection, ServiceTier } from '../../infrastructure/database.js';
+import { Sale } from '../../domain/entities/sale.entity.ts';
+import { ISaleRepository } from '../../domain/ports/sale.repository.ts';
+import { getDatabaseConnection, ServiceTier } from '../../infrastructure/database.ts';
 
 export class SqlServerSaleRepository implements ISaleRepository {
     constructor(private tier: ServiceTier = 'free') { }

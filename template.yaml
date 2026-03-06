@@ -51,6 +51,8 @@ Resources:
       BuildProperties:
         Minify: false
         Target: "esNext"
+        OutExtension:
+          - .js=.mjs
         Format: esm
         Sourcemap: true
         External:
@@ -70,6 +72,8 @@ Resources:
       BuildProperties:
         Minify: false
         Target: "esNext"
+        OutExtension:
+          - .js=.mjs
         Format: esm
         Sourcemap: true
         External:
@@ -90,6 +94,8 @@ Resources:
       BuildProperties:
         Minify: false
         Target: "esNext"
+        OutExtension:
+          - .js=.mjs
         Format: esm
         Sourcemap: true
         External:

@@ -1,5 +1,5 @@
-import { Sale } from '../../domain/entities/sale.entity.js';
-import { ISaleRepository } from '../../domain/ports/sale.repository.js';
+import { Sale } from '../../domain/entities/sale.entity.ts';
+import { ISaleRepository } from '../../domain/ports/sale.repository.ts';
 
 export class DynamoDBSaleRepository implements ISaleRepository {
     private sales: Sale[] = [];
