@@ -49,10 +49,43 @@ Resources:
       AccessLogSetting:
         DestinationArn: !GetAtt ApiAccessLogGroup.Arn
         Format: '$context.identity.sourceIp $context.authorizer.claims.sub [$context.requestTime] "$context.httpMethod $context.resourcePath $context.protocol" $context.status $context.requestId $context.integration.status $context.integration.latency'
-      Cors:
-        AllowMethods: "'OPTIONS,POST,GET,PUT,DELETE'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: "'*'" # Ajustar a dominios específicos en producción
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title: !Sub "Sales API - ${Environment}"
+          version: "1.0"
+        paths:
+          /sales:
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateSaleFunction.Arn}/invocations"
+              responses: {}
+            options:
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET,PUT,DELETE'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                    responseTemplates:
+                      application/json: ""
+              responses:
+                200:
+                  description: Default response para CORS
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
 
   # --- CORE LOGIC: LAMBDAS (ADAPTERS) ---
   CreateSaleFunction:
@@ -60,13 +93,6 @@ Resources:
     Properties:
       CodeUri: src/
       Handler: modules/sales/adapters/inbound/create-sale/handler.handler
-      Events:
-        CreateSale:
-          Type: Api
-          Properties:
-            Path: /sales
-            Method: post
-            RestApiId: !Ref SalesApi
       Policies:
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt SalesOrchestrator.Name
@@ -163,6 +189,14 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/apigateway/SalesApi-${Environment}"
       RetentionInDays: !Ref LogRetentionDays
+
+  CreateSalePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt CreateSaleFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SalesApi}/*"
 
   # --- STORAGE ---
   SalesTable:

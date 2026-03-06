@@ -55,6 +55,7 @@ hexagonal-aws-sam/
 - **AWS SAM & esbuild**: Bundling moderno con soporte nativo para **ESM (ECMAScript Modules)**.
 - **Observabilidad & Robustez**:
     - **Access Logs**: Logs detallados en API Gateway para auditoría completa.
+    - **OpenAPI 3.0**: Definición explícita de la API mediante `DefinitionBody` para mayor control y documentación técnica.
     - **Tracing (X-Ray)**: Trazabilidad completa de peticiones.
     - **Log Retention**: Política de retención de 7 días configurada para optimizar costes.
     - **CORS Estándar**: Configuración global de CORS para integraciones seguras.
