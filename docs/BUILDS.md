@@ -26,4 +26,19 @@ Las librerías pesadas (como `mssql`) no se incluyen en el bundle de la Lambda.
 4.  SAM construye la Layer instalando los módulos físicamente.
 5.  En ejecución, Node.js resuelve el `import` leyendo desde `/opt/nodejs/node_modules` (la ruta de la Layer).
 
-**Importante**: Para que TypeScript local no dé errores por librerías externas, debes instalarlas como `devDependencies` en el `package.json` raíz.
+## 4. Compilación de Pilas Anidadas
+`sam build` utiliza el algoritmo de recursión para entrar en cada archivo `.yaml` hijo. SAM no solo compila el código, sino que también genera una ruta interna que luego el comando `deploy` traducirá a una URL de S3.
+
+### Prototipado Local
+Dentro de `.aws-sam/build/`, se creará una subcarpeta por cada Stack anidado, lo que facilita el debugeo de los binarios generados.
+
+## 5. Estrategia de CI/CD Multi-entorno
+El proyecto cuenta con automatización completa para desplegar a entornos de **CERT** y **PROD**.
+
+### Herramientas
+*   **GitHub Actions**: Automatiza despliegues mediante pushes a ramas (`develop` -> cert, `main` -> prod).
+*   **AWS CodeBuild**: Permite ejecutar el build y despliegue directamente en la infraestructura de AWS.
+*   **samconfig.toml**: Contiene los parámetros específicos por entorno, permitiendo consistencia en el despliegue (`--config-env`).
+
+### Seguridad de los Pipelines
+Usamos **OpenID Connect (OIDC)** con AWS, lo que elimina la necesidad de almacenar claves de acceso estáticas (`AccessKeyId`, `SecretAccessKey`) en los secretos de GitHub, reduciendo la superficie de ataque.
