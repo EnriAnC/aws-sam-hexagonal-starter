@@ -71,6 +71,10 @@ Se utiliza el archivo `samconfig.toml` para definir los parámetros de cada ento
 - **`erp-sales-cert`**: Stack para pruebas y validación.
 - **`erp-sales-prod`**: Stack principal de producción.
 
+### Canalizaciones Admitidas
+- **GitHub Actions**: (Recomendado) Automatización completa basada en ramas (`.github/workflows/deploy.yml`).
+- **AWS CodeBuild**: Soporte nativo mediante `buildspec.yml`. Permite construcción y despliegue automático si se provee la variable de entorno `ENV` (valores: `cert` o `prod`).
+
 ### Requisitos para el Pipeline (GitHub Secrets)
 Para que el despliegue funcione, es necesario configurar el siguiente secreto en el repositorio:
 - `AWS_ROLE_ARN`: El ARN del rol IAM que GitHub Actions asumirá mediante OIDC para desplegar los recursos.

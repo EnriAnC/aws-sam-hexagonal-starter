@@ -1,0 +1,29 @@
+version: 0.2
+
+phases:
+  # install:
+  #   runtime-versions:
+  #     nodejs: 20
+  #   commands:
+  #     - npm install
+  build:
+    commands:
+      - echo Build started on `date`
+      - sam build
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - |
+        if [ -n "$ENV" ]; then
+          echo "Deploying to environment: $ENV"
+          sam deploy --config-env $ENV --no-confirm-changeset --no-fail-on-empty-changeset
+        else
+          echo "No ENV variable detected. Skipping sam deploy. (Use ENV=cert or ENV=prod)"
+        fi
+
+artifacts:
+  files:
+    - template.yaml
+    - .aws-sam/**/*
+    - samconfig.toml
+  discard-paths: no
