@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Lambda Layers for ERP Serverless
+
+Parameters:
+  Environment:
+    Type: String
+    Default: cert
+
+Resources:
+  # --- INFRASTRUCTURE: LAYERS ---
+  SqlServerLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "SqlServerDriverLayer-${Environment}"
+      Description: "Contiene la librería mssql para acceso a base de datos corporativa"
+      ContentUri: ../layers/sqlserver/
+      CompatibleRuntimes:
+        - nodejs20.x
+    Metadata:
+      BuildMethod: nodejs20.x # SAM instalará las dependencias aquí
+
+Outputs:
+  SqlServerLayerArn:
+    Description: "The ARN of the SQL Server Driver Layer"
+    Value: !Ref SqlServerLayer

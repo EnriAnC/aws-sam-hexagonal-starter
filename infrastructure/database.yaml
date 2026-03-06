@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Storage (DynamoDB) Infrastructure for ERP Serverless
+
+Parameters:
+  Environment:
+    Type: String
+    Default: cert
+
+Resources:
+  # --- STORAGE ---
+  SalesTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub "SalesTable-${Environment}"
+      PrimaryKey:
+        Name: saleId
+        Type: String
+
+Outputs:
+  SalesTableArn:
+    Description: "The ARN of the Sales Table"
+    Value: !GetAtt SalesTable.Arn
+  SalesTableName:
+    Description: "The name of the Sales Table"
+    Value: !Ref SalesTable

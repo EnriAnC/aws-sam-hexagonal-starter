@@ -35,6 +35,12 @@ El proceso de venta se gestiona mediante el `SalesOrchestrator` (Step Functions)
 
 ```text
 hexagonal-aws-sam/
+├── infrastructure/              # INFRAESTRUCTURA (Nested Stacks)
+│   ├── api.yaml                 # API Gateway & OpenAPI
+│   ├── database.yaml            # DynamoDB & Storage
+│   ├── events.yaml              # EventBus & Messages
+│   ├── layers.yaml              # Lambda Layers
+│   └── sales-module.yaml        # Lambdas & Orquestación
 ├── src/
 │   ├── modules/ sales/          # Bounded Context: Ventas
 │   │   ├── domain/              # Lógica pura (Entidades, Puertos, Servicios)
@@ -44,9 +50,9 @@ hexagonal-aws-sam/
 │   │   │   └── outbound/        # Implementaciones (dynamodb-sale, sqlserver-sale)
 │   │   └── infrastructure/      # Configuración técnica (database, logger)
 │   └── shared/                  # Código compartido entre módulos
-├── layers/                      # Lambda Layers (msql driver y shared weights)
+├── layers/                      # Código fuente de las Layers
 ├── statemachines/               # Definición de Step Functions (ASL)
-├── template.yaml                # Infraestructura como Código (SAM)
+├── template.yaml                # STACK RAÍZ (Orquestador de Pilas Anidadas)
 └── package.json                 # Scripts: npm run sam:build
 ```
 

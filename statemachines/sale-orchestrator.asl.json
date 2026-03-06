@@ -30,7 +30,7 @@
               "status": "COMPLETED"
             },
             "DetailType": "SaleCompleted",
-            "EventBusName": "ErpEventBus",
+            "EventBusName": "${EventBusName}",
             "Source": "erp.sales"
           }
         ]

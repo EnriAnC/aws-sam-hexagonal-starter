@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Sales Module (Lambdas & Step Functions) for ERP Serverless
+
+Parameters:
+  Environment:
+    Type: String
+    Default: cert
+  EventBusName:
+    Type: String
+  SqlServerLayerArn:
+    Type: String
+  SalesTableName:
+    Type: String
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: nodejs20.x
+    Architectures:
+      - x86_64
+    Tracing: Active
+    Environment:
+      Variables:
+        EVENT_BUS_NAME: !Ref EventBusName
+        ENVIRONMENT: !Ref Environment
+        SALES_TABLE_NAME: !Ref SalesTableName
+    Tags:
+      Project: ERP-Serverless
+      Environment: !Ref Environment
+      ManagedBy: SAM
+
+Resources:
+  # --- CORE LOGIC: LAMBDAS (ADAPTERS) ---
+  CreateSaleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: modules/sales/adapters/inbound/create-sale/handler.handler
+      Policies:
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt SalesOrchestrator.Name
+    Metadata: # AWS SAM will use esbuild to bundle TS to JS
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "esNext"
+        OutExtension:
+          - .js=.mjs
+        Format: esm
+        Sourcemap: true
+        External:
+          - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
+        EntryPoints: 
+          - modules/sales/adapters/inbound/create-sale/handler.ts
+
+  ProcessInventoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: modules/sales/adapters/inbound/process-inventory/handler.handler
+      Layers:
+        - !Ref SqlServerLayerArn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "esNext"
+        OutExtension:
+          - .js=.mjs
+        Format: esm
+        Sourcemap: true
+        External:
+          - '@aws-sdk/*'
+          - 'mssql' # Marcamos como externo para que lo busque en la Layer
+        EntryPoints: 
+          - modules/sales/adapters/inbound/process-inventory/handler.ts
+
+  EmitInvoiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: modules/sales/adapters/inbound/emit-invoice/handler.handler
+      Layers:
+        - !Ref SqlServerLayerArn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "esNext"
+        OutExtension:
+          - .js=.mjs
+        Format: esm
+        Sourcemap: true
+        External:
+          - '@aws-sdk/*'
+          - 'mssql'
+        EntryPoints: 
+          - modules/sales/adapters/inbound/emit-invoice/handler.ts
+
+  # --- ORCHESTRATION: STEP FUNCTIONS ---
+  SalesOrchestrator:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub "SalesOrchestrator-${Environment}"
+      DefinitionUri: ../statemachines/sale-orchestrator.asl.json
+      DefinitionSubstitutions:
+        InventoryFunctionArn: !GetAtt ProcessInventoryFunction.Arn
+        InvoiceFunctionArn: !GetAtt EmitInvoiceFunction.Arn
+        EventBusName: !Ref EventBusName
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ProcessInventoryFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref EmitInvoiceFunction
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref EventBusName
+
+Outputs:
+  CreateSaleFunctionArn:
+    Description: "The ARN of the CreateSale Lambda"
+    Value: !GetAtt CreateSaleFunction.Arn

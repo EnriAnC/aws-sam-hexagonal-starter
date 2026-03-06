@@ -1,8 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  ERP Serverless - Sales Module
-  Architecture for a scalable and clean ERP system.
+  ERP Serverless - Root Template (Nested Stacks Architecture)
 
 Parameters:
   Environment:
@@ -16,197 +15,56 @@ Parameters:
     Default: 7
     Description: Duration to keep CloudWatch Logs (in days)
 
-Globals:
-  Function:
-    Timeout: 30
-    MemorySize: 256 # Aumentamos para soportar drivers pesados
-    Runtime: nodejs20.x
-    Architectures:
-      - x86_64
-    Tracing: Active
-    Environment:
-      Variables:
-        EVENT_BUS_NAME: !Ref ErpEventBus
-        ENVIRONMENT: !Ref Environment
-    Tags:
-      Project: ERP-Serverless
-      Environment: !Ref Environment
-      ManagedBy: SAM
-
 Resources:
-  # --- INFRASTRUCTURE: EVENTS ---
-  ErpEventBus:
-    Type: AWS::Events::EventBus
-    Properties:
-      Name: !Sub "ErpEventBus-${Environment}"
-
-  # --- INFRASTRUCTURE: API ---
-  SalesApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: !Ref Environment
-      TracingEnabled: true
-      AccessLogSetting:
-        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
-        Format: '$context.identity.sourceIp $context.authorizer.claims.sub [$context.requestTime] "$context.httpMethod $context.resourcePath $context.protocol" $context.status $context.requestId $context.integration.status $context.integration.latency'
-      DefinitionBody:
-        openapi: 3.0.1
-        info:
-          title: !Sub "Sales API - ${Environment}"
-          version: "1.0"
-        paths:
-          /sales:
-            post:
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateSaleFunction.Arn}/invocations"
-              responses: {}
-            options:
-              x-amazon-apigateway-integration:
-                type: mock
-                requestTemplates:
-                  application/json: "{\"statusCode\": 200}"
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-                      method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET,PUT,DELETE'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
-                    responseTemplates:
-                      application/json: ""
-              responses:
-                200:
-                  description: Default response para CORS
-                  headers:
-                    Access-Control-Allow-Headers:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Origin:
-                      type: string
-
-  # --- CORE LOGIC: LAMBDAS (ADAPTERS) ---
-  CreateSaleFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/
-      Handler: modules/sales/adapters/inbound/create-sale/handler.handler
-      Policies:
-        - StepFunctionsExecutionPolicy:
-            StateMachineName: !GetAtt SalesOrchestrator.Name
-    Metadata: # AWS SAM will use esbuild to bundle TS to JS
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: false
-        Target: "esNext"
-        OutExtension:
-          - .js=.mjs
-        Format: esm
-        Sourcemap: true
-        External:
-          - '@aws-sdk/*' # No metas el SDK en el bundle de la Lambda
-        EntryPoints: 
-          - modules/sales/adapters/inbound/create-sale/handler.ts
-
-  ProcessInventoryFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/
-      Handler: modules/sales/adapters/inbound/process-inventory/handler.handler
-      Layers:
-        - !Ref SqlServerLayer
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: false
-        Target: "esNext"
-        OutExtension:
-          - .js=.mjs
-        Format: esm
-        Sourcemap: true
-        External:
-          - '@aws-sdk/*'
-          - 'mssql' # Marcamos como externo para que lo busque en la Layer
-        EntryPoints: 
-          - modules/sales/adapters/inbound/process-inventory/handler.ts
-
-  EmitInvoiceFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/
-      Handler: modules/sales/adapters/inbound/emit-invoice/handler.handler
-      Layers:
-        - !Ref SqlServerLayer
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: false
-        Target: "esNext"
-        OutExtension:
-          - .js=.mjs
-        Format: esm
-        Sourcemap: true
-        External:
-          - '@aws-sdk/*'
-          - 'mssql'
-        EntryPoints: 
-          - modules/sales/adapters/inbound/emit-invoice/handler.ts
-
   # --- INFRASTRUCTURE: LAYERS ---
-  SqlServerLayer:
-    Type: AWS::Serverless::LayerVersion
+  LayersStack:
+    Type: AWS::Serverless::Application
     Properties:
-      LayerName: SqlServerDriverLayer
-      Description: "Contiene la librería mssql para acceso a base de datos corporativa"
-      ContentUri: layers/sqlserver/
-      CompatibleRuntimes:
-        - nodejs20.x
-    Metadata:
-      BuildMethod: nodejs20.x # SAM instalará las dependencias aquí
+      Location: infrastructure/layers.yaml
+      Parameters:
+        Environment: !Ref Environment
 
-  # --- ORCHESTRATION: STEP FUNCTIONS ---
-  SalesOrchestrator:
-    Type: AWS::Serverless::StateMachine
+  # --- INFRASTRUCTURE: DATABASE ---
+  DatabaseStack:
+    Type: AWS::Serverless::Application
     Properties:
-      Name: !Sub "SalesOrchestrator-${Environment}"
-      DefinitionUri: statemachines/sale-orchestrator.asl.json
-      DefinitionSubstitutions:
-        InventoryFunctionArn: !GetAtt ProcessInventoryFunction.Arn
-        InvoiceFunctionArn: !GetAtt EmitInvoiceFunction.Arn
-      Policies:
-        - LambdaInvokePolicy:
-            FunctionName: !Ref ProcessInventoryFunction
-        - LambdaInvokePolicy:
-            FunctionName: !Ref EmitInvoiceFunction
-        - EventBridgePutEventsPolicy:
-            EventBusName: !Ref ErpEventBus
+      Location: infrastructure/database.yaml
+      Parameters:
+        Environment: !Ref Environment
 
-  # --- INFRASTRUCTURE: MONITORING ---
-  ApiAccessLogGroup:
-    Type: AWS::Logs::LogGroup
+  # --- INFRASTRUCTURE: EVENTS ---
+  EventsStack:
+    Type: AWS::Serverless::Application
     Properties:
-      LogGroupName: !Sub "/aws/apigateway/SalesApi-${Environment}"
-      RetentionInDays: !Ref LogRetentionDays
+      Location: infrastructure/events.yaml
+      Parameters:
+        Environment: !Ref Environment
 
-  CreateSalePermission:
-    Type: AWS::Lambda::Permission
+  # --- CORE LOGIC: SALES MODULE ---
+  SalesModuleStack:
+    Type: AWS::Serverless::Application
     Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt CreateSaleFunction.Arn
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SalesApi}/*"
+      Location: infrastructure/sales-module.yaml
+      Parameters:
+        Environment: !Ref Environment
+        EventBusName: !GetAtt EventsStack.Outputs.EventBusName
+        SqlServerLayerArn: !GetAtt LayersStack.Outputs.SqlServerLayerArn
+        SalesTableName: !GetAtt DatabaseStack.Outputs.SalesTableName
 
-  # --- STORAGE ---
-  SalesTable:
-    Type: AWS::Serverless::SimpleTable
+  # --- ENTRY POINT: API ---
+  ApiStack:
+    Type: AWS::Serverless::Application
     Properties:
-      PrimaryKey:
-        Name: saleId
-        Type: String
+      Location: infrastructure/api.yaml
+      Parameters:
+        Environment: !Ref Environment
+        CreateSaleFunctionArn: !GetAtt SalesModuleStack.Outputs.CreateSaleFunctionArn
+        LogRetentionDays: !Ref LogRetentionDays
 
 Outputs:
   SalesApiUrl:
     Description: "API Gateway endpoint URL for Sales module"
-    Value: !Sub "https://${SalesApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/sales/"
+    Value: !GetAtt ApiStack.Outputs.SalesApiUrl
+  SalesApiId:
+    Description: "The ID of the Sales API"
+    Value: !GetAtt ApiStack.Outputs.SalesApiId
