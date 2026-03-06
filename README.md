@@ -53,6 +53,12 @@ hexagonal-aws-sam/
 ## 🛠️ Tecnologías y Configuración
 
 - **AWS SAM & esbuild**: Bundling moderno con soporte nativo para **ESM (ECMAScript Modules)**.
+- **Observabilidad & Robustez**:
+    - **Access Logs**: Logs detallados en API Gateway para auditoría completa.
+    - **Tracing (X-Ray)**: Trazabilidad completa de peticiones.
+    - **Log Retention**: Política de retención de 7 días configurada para optimizar costes.
+    - **CORS Estándar**: Configuración global de CORS para integraciones seguras.
+    - **Tagging**: Etiquetado consistente por Proyecto y Entorno.
 - **Multi-DB Strategy**: 
     - **DynamoDB**: Almacenamiento rápido para el estado de la venta.
     - **SQL Server**: Integración con sistemas legacy mediante **Lambda Layers** para evitar bundles pesados (configurado como `External` en SAM).
