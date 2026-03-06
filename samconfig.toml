@@ -1,0 +1,21 @@
+version = 0.1
+
+[cert.deploy.parameters]
+stack_name = "erp-sales-cert"
+resolve_s3 = true
+s3_prefix = "erp-sales-cert"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=cert"
+image_repositories = []
+
+[prod.deploy.parameters]
+stack_name = "erp-sales-prod"
+resolve_s3 = true
+s3_prefix = "erp-sales-prod"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=prod"
+image_repositories = []

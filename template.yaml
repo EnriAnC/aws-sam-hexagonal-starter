@@ -4,6 +4,13 @@ Description: >
   ERP Serverless - Sales Module
   Architecture for a scalable and clean ERP system.
 
+Parameters:
+  Environment:
+    Type: String
+    Default: cert
+    AllowedValues: [cert, prod]
+    Description: Deployment environment (cert or prod)
+
 Globals:
   Function:
     Timeout: 30
@@ -15,19 +22,20 @@ Globals:
     Environment:
       Variables:
         EVENT_BUS_NAME: !Ref ErpEventBus
+        ENVIRONMENT: !Ref Environment
 
 Resources:
   # --- INFRASTRUCTURE: EVENTS ---
   ErpEventBus:
     Type: AWS::Events::EventBus
     Properties:
-      Name: ErpEventBus
+      Name: !Sub "ErpEventBus-${Environment}"
 
   # --- INFRASTRUCTURE: API ---
   SalesApi:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: Prod
+      StageName: !Ref Environment
       TracingEnabled: true
 
   # --- CORE LOGIC: LAMBDAS (ADAPTERS) ---
@@ -142,5 +150,5 @@ Resources:
 
 Outputs:
   SalesApiUrl:
-    Description: "API Gateway endpoint URL for Prod stage for Sales module"
-    Value: !Sub "https://${SalesApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/sales/"
+    Description: "API Gateway endpoint URL for Sales module"
+    Value: !Sub "https://${SalesApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/sales/"

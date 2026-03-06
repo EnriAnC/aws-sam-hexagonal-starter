@@ -58,17 +58,37 @@ hexagonal-aws-sam/
     - **SQL Server**: Integración con sistemas legacy mediante **Lambda Layers** para evitar bundles pesados (configurado como `External` en SAM).
 - **EventBridge**: Bus de eventos centralizado (`ErpEventBus`) para comunicación desacoplada.
 
+## 🚀 CI/CD & Multi-Entorno
+
+El proyecto cuenta con una canalización de CI/CD robusta utilizando **GitHub Actions** y **AWS SAM**, configurada para manejar dos entornos aislados:
+
+### Estrategia de Ramas
+- **Rama `develop`**: Despliegue automático al entorno de **Certificación (`cert`)**. No requiere confirmación manual.
+- **Rama `main`**: Despliegue automático al entorno de **Producción (`prod`)**. Requiere confirmación de changeset (vía logs o manual según configuración).
+
+### Configuración de SAM
+Se utiliza el archivo `samconfig.toml` para definir los parámetros de cada entorno:
+- **`erp-sales-cert`**: Stack para pruebas y validación.
+- **`erp-sales-prod`**: Stack principal de producción.
+
+### Requisitos para el Pipeline (GitHub Secrets)
+Para que el despliegue funcione, es necesario configurar el siguiente secreto en el repositorio:
+- `AWS_ROLE_ARN`: El ARN del rol IAM que GitHub Actions asumirá mediante OIDC para desplegar los recursos.
+
 ## 📦 Comandos Útiles
 
 ```bash
 # Construir el proyecto (npm script)
 npm run sam:build
 
+# Desplegar manualmente a Cert
+sam deploy --config-env cert
+
+# Desplegar manualmente a Prod
+sam deploy --config-env prod
+
 # Probar la API localmente
 sam local start-api
-
-# Desplegar a AWS
-sam deploy --guided
 ```
 
 ## 📝 Guía de Implementación
