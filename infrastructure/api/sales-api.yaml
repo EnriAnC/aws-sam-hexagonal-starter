@@ -1,0 +1,99 @@
+openapi: 3.0.1
+info:
+  title: "ERP Sales API"
+  version: "1.0"
+x-amazon-apigateway-request-validators:
+  ValidateBody:
+    validateRequestBody: true
+    validateRequestParameters: false
+
+paths:
+  /sales:
+    post:
+      summary: "Crea una nueva venta con validación robusta"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSaleRequest"
+      x-amazon-apigateway-request-validator: ValidateBody
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateSaleFunctionArn}/invocations"
+      responses:
+        201:
+          description: "Venta creada"
+        400:
+          description: "Error de validación técnico"
+
+    options:
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET,PUT,DELETE'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: ""
+      responses:
+        200:
+          description: "CORS OK"
+          headers:
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Origin:
+              type: string
+
+components:
+  schemas:
+    CreateSaleRequest:
+      type: object
+      # AQUÍ defines los obligatorios:
+      required: [customerId, items] 
+      # El resto son opcionales por defecto en OpenAPI
+      properties:
+        customerId:
+          type: string
+          minLength: 5
+          description: "ID del cliente (Obligatorio)"
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/SaleItem"
+        # CAMPO OPCIONAL:
+        notes:
+          type: string
+          maxLength: 250
+          description: "Comentarios adicionales (Opcional)"
+        # OBJETO DINÁMICO (SOPRTE PARA CAMPOS EXTRA):
+        additionalMetadata:
+          type: object
+          additionalProperties: true # ← Esto permite enviarle cualquier par clave/valor sin que falle.
+          description: "Datos extra del ERP (Opcional y Dinámico)"
+
+    SaleItem:
+      type: object
+      required: [productId, quantity, price]
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        price:
+          type: number
+          exclusiveMinimum: 0
+        discount:
+          type: number
+          minimum: 0
+          default: 0 # Valor por defecto si no se envía.

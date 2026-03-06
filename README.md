@@ -62,6 +62,7 @@ hexagonal-aws-sam/
 - **Observabilidad & Robustez**:
     - **Access Logs**: Logs detallados en API Gateway para auditoría completa.
     - **OpenAPI 3.0**: Definición explícita de la API mediante `DefinitionBody` para mayor control y documentación técnica.
+    - **Validación de Esquema**: API Gateway valida el cuerpo de las peticiones (JSON Schema) antes de invocar a la Lambda, reduciendo errores y costes de ejecución.
     - **Tracing (X-Ray)**: Trazabilidad completa de peticiones.
     - **Log Retention**: Política de retención de 7 días configurada para optimizar costes.
     - **CORS Estándar**: Configuración global de CORS para integraciones seguras.
